@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Desmos Lite</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+}
+#container {
+    display: flex;
+    height: 100vh;
+}
+#panel {
+    width: 300px;
+    padding: 15px;
+    border-right: 1px solid #ccc;
+}
+input {
+    width: 100%;
+    padding: 8px;
+    font-size: 16px;
+    margin-bottom: 10px;
+}
+canvas {
+    flex: 1;
+}
+small {
+    color: #555;
+}
+</style>
+</head>
+
+<body>
+<div id="container">
+
+<div id="panel">
+    <h3>y =</h3>
+    <input id="eq" value="sin(x)">
+    <input id="xmin" type="number" value="-10">
+    <input id="xmax" type="number" value="10">
+    <small>
+        Examples: sin(x), cos(x), x^2, sin(x)/x
+    </small>
+</div>
+
+<canvas id="graph"></canvas>
+
+</div>
+
+<script>
+const ctx = document.getElementById("graph").getContext("2d");
+let chart;
+
+function preprocess(input) {
+    let eq = input.toLowerCase();
+
+    // remove y =
+    eq = eq.replace(/^y\s*=\s*/, "");
+
+    // sin x → sin(x)
+    eq = eq.replace(/sin\s*x/g, "sin(x)")
+           .replace(/cos\s*x/g, "cos(x)")
+           .replace(/tan\s*x/g, "tan(x)");
+
+    // power
+    eq = eq.replace(/\^/g, "**");
+
+    // functions
+    eq = eq.replace(/sin/g, "Math.sin")
+           .replace(/cos/g, "Math.cos")
+           .replace(/tan/g, "Math.tan")
+           .replace(/log/g, "Math.log")
+           .replace(/sqrt/g, "Math.sqrt");
+
+    // constants
+    eq = eq.replace(/\bpi\b/g, "Math.PI")
+           .replace(/\be\b/g, "Math.E");
+
+    return eq;
+}
+
+function plot() {
+    const raw = document.getElementById("eq").value;
+    const xmin = +document.getElementById("xmin").value;
+    const xmax = +document.getElementById("xmax").value;
+
+    let eq;
+    try {
+        eq = preprocess(raw);
+        new Function("x", "return " + eq); // syntax test
+    } catch {
+        return;
+    }
+
+    let xs = [], ys = [];
+
+    for (let x = xmin; x <= xmax; x += 0.05) {
+        try {
+            let y = eval(eq);
+            if (isFinite(y)) {
+                xs.push(x);
+                ys.push(y);
+            }
+        } catch {}
+    }
+
+    if (chart) chart.destroy();
+
+    chart = new Chart(ctx, {
+        type: "line",
+        data: {
+            labels: xs,
+            datasets: [{
+                data: ys,
+                borderColor: "#2d70b3",
+                borderWidth: 2,
+                pointRadius: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            animation: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { color: "#ddd" } },
+                y: { grid: { color: "#ddd" } }
+            }
+        }
+    });
+}
+
+["eq","xmin","xmax"].forEach(id =>
+    document.getElementById(id).addEventListener("input", plot)
+);
+
+plot();
+</script>
+
+</body>
+</html>
